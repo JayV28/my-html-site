@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Video Library</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Custom styles for dark mode and toggle */
+    .dark-mode {
+      background-color: #1a202c;
+      color: #e2e8f0;
+    }
+    .dark-mode input,
+    .dark-mode select,
+    .dark-mode button {
+      background-color: #2d3748;
+      color: #e2e8f0;
+      border-color: #4a5568;
+    }
+    .dark-mode a {
+      color: #63b3ed;
+    }
+    .dark-mode .bg-blue-800 {
+      background-color: #2b6cb0;
+    }
+    .dark-mode .bg-blue-100 {
+      background-color: #2d3748;
+    }
+    .dark-mode .bg-gray-800 {
+      background-color: #2d3748;
+    }
+    .dark-mode .hover\:bg-blue-700:hover {
+      background-color: #3182ce;
+    }
+    .dark-mode .hover\:bg-red-700:hover {
+      background-color: #c53030;
+    }
+    .dark-mode .hover\:bg-green-700:hover {
+      background-color: #2f855a;
+    }
+    .dark-mode .hover\:bg-purple-700:hover {
+      background-color: #6b46c1;
+    }
+    .dark-mode .hover\:bg-yellow-700:hover {
+      background-color: #d69e2e;
+    }
+    .toggle-arrow {
+      transition: transform 0.3s ease;
+    }
+    .toggle-arrow.rotate {
+      transform: rotate(180deg);
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 640px) { /* Tailwind's 'sm' breakpoint */
+      .video-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .video-item a {
+        max-width: 100%;
+        word-wrap: break-word; /* Allow wrapping of long words */
+        white-space: normal; /* Remove nowrap to enable wrapping */
+        line-height: 1.2; /* Improve readability with wrapped text */
+      }
+      .video-item .button-group {
+        margin-top: 0.5rem;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+      }
+      .video-item button {
+        flex: 1;
+        margin-left: 0.25rem;
+      }
+      .video-item button:first-child {
+        margin-left: 0;
+      }
+      main {
+        padding: 0.5rem;
+      }
+      #controlSection {
+        padding: 0.5rem;
+      }
+      input, select, button {
+        font-size: 0.875rem; /* Slightly smaller text for mobile */
+      }
+    }
+  </style>
+</head>
+<body class="dark-mode bg-gray-900 min-h-screen flex flex-col items-center text-white">
+  <header class="w-full bg-blue-800 text-white p-4 text-center relative">
+    <h1 class="text-2xl font-bold">My Video Library</h1>
+    <button 
+      id="toggleSection" 
+      class="absolute top-4 right-4 text-white hover:text-gray-300 focus:outline-none toggle-arrow"
+      onclick="toggleSection()"
+    >
+      ▼
+    </button>
+  </header>
+  <main class="max-w-4xl w-full p-4">
+    <div id="controlSection" class="mb-6 bg-gray-800 p-4 rounded-md shadow transition-all duration-300">
+      <h2 class="text-lg font-semibold mb-4">Manage Videos</h2>
+      <input 
+        type="text" 
+        id="videoLink" 
+        placeholder="Enter any video URL (e.g., https://www.youtube.com/watch?v=...)" 
+        class="w-full p-2 border rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 border-gray-600"
+      >
+      <input 
+        type="text" 
+        id="videoLabel" 
+        placeholder="Enter video label (e.g., Tutorial 1)" 
+        class="w-full p-2 border rounded-md mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 border-gray-600"
+      >
+      <div class="flex gap-2">
+        <select 
+          id="videoGroup" 
+          class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 border-gray-600"
+        >
+          <option value="" disabled selected>Select or type a group</option>
+          <option value="new">Add New Group</option>
+        </select>
+        <input 
+          type="text" 
+          id="newGroup" 
+          placeholder="New group name" 
+          class="w-full p-2 border rounded-md hidden focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 border-gray-600"
+        >
+      </div>
+      <input 
+        type="password" 
+        id="addPassword" 
+        placeholder="Enter password to add video" 
+        class="w-full p-2 border rounded-md mt-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-700 border-gray-600"
+      >
+      <button 
+        onclick="addVideo()" 
+        class="mt-2 w-full bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+      >
+        Add Video
+      </button>
+      <div class="flex gap-2 mt-2">
+        <button 
+          onclick="exportData()" 
+          class="w-full bg-green-700 text-white px-4 py-2 rounded-md hover:bg-green-600"
+        >
+          Export Data
+        </button>
+        <input 
+          type="file" 
+          id="importFile" 
+          accept=".json" 
+          class="hidden"
+          onchange="importData(event)"
+        >
+        <button 
+          onclick="document.getElementById('importFile').click()" 
+          class="w-full bg-purple-700 text-white px-4 py-2 rounded-md hover:bg-purple-600"
+        >
+          Import Data
+        </button>
+      </div>
+    </div>
+    <div id="videoList"></div>
+  </main>
+  <script>
+    // Load saved videos and groups on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      updateGroupDropdown();
+      displayVideos();
+    });
+
+    // Handle group dropdown change
+    document.getElementById('videoGroup').addEventListener('change', function() {
+      const newGroupInput = document.getElementById('newGroup');
+      newGroupInput.classList.toggle('hidden', this.value !== 'new');
+    });
+
+    function addVideo() {
+      const videoLink = document.getElementById('videoLink').value.trim();
+      const videoLabel = document.getElementById('videoLabel').value.trim();
+      let videoGroup = document.getElementById('videoGroup').value;
+      const newGroup = document.getElementById('newGroup').value.trim();
+      const password = document.getElementById('addPassword').value;
+
+      // Define the correct password
+      const correctPassword = "7vCh+*3#-123@";
+
+      if (!password || password !== correctPassword) {
+        alert('Incorrect or missing password. Only authorized users can add videos.');
+        return;
+      }
+
+      if (!videoLink) {
+        alert('Please enter a video URL');
+        return;
+      }
+      if (!videoLabel) {
+        alert('Please enter a video label');
+        return;
+      }
+      if (!videoGroup || (videoGroup === 'new' && !newGroup)) {
+        alert('Please select a group or enter a new group name');
+        return;
+      }
+
+      if (videoGroup === 'new') {
+        videoGroup = newGroup;
+      }
+
+      let videos = JSON.parse(localStorage.getItem('videos')) || [];
+      videos.push({ url: videoLink, label: videoLabel, group: videoGroup, completed: false });
+      localStorage.setItem('videos', JSON.stringify(videos));
+
+      document.getElementById('videoLink').value = '';
+      document.getElementById('videoLabel').value = '';
+      document.getElementById('videoGroup').value = '';
+      document.getElementById('newGroup').value = '';
+      document.getElementById('addPassword').value = '';
+      document.getElementById('newGroup').classList.add('hidden');
+      updateGroupDropdown();
+      displayVideos();
+    }
+
+    function updateGroupDropdown() {
+      const videos = JSON.parse(localStorage.getItem('videos')) || [];
+      const groups = [...new Set(videos.map(video => video.group))];
+      const dropdown = document.getElementById('videoGroup');
+      dropdown.innerHTML = `
+        <option value="" disabled selected>Select or type a group</option>
+        ${groups.map(group => `<option value="${group}">${group}</option>`).join('')}
+        <option value="new">Add New Group</option>
+      `;
+    }
+
+    function displayVideos() {
+      const videoList = document.getElementById('videoList');
+      videoList.innerHTML = '';
+      const videos = JSON.parse(localStorage.getItem('videos')) || [];
+      const groups = [...new Set(videos.map(video => video.group))];
+
+      groups.forEach(group => {
+        const groupVideos = videos.filter(video => video.group === group);
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'w-full mb-4';
+        groupDiv.innerHTML = `
+          <div class="bg-gray-700 p-3 rounded-md flex justify-between items-center cursor-pointer" onclick="toggleGroup(this)">
+            <h2 class="text-lg font-semibold">${group}</h2>
+            <div>
+              <button 
+                onclick="event.stopPropagation(); renameGroup('${group}')" 
+                class="bg-yellow-700 text-white px-2 py-1 rounded-md hover:bg-yellow-600 mr-2"
+              >
+                Rename
+              </button>
+              <button 
+                onclick="event.stopPropagation(); deleteGroup('${group}')" 
+                class="bg-red-700 text-white px-2 py-1 rounded-md hover:bg-red-600"
+              >
+                Delete Group
+              </button>
+            </div>
+          </div>
+          <div class="group-videos mt-2 hidden" id="group-${group}">
+            <ul class="list-decimal list-inside">
+              ${groupVideos.map((video, index) => `
+                <li class="video-item bg-gray-800 p-4 rounded-md shadow flex justify-between items-center mb-2" data-index="${videos.indexOf(video)}">
+                  <div class="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      id="completed-${videos.indexOf(video)}" 
+                      ${video.completed ? 'checked' : ''} 
+                      onchange="toggleCompleted(event)"
+                      class="mr-2"
+                    >
+                    <a 
+                      href="${video.url}" 
+                      target="_blank" 
+                      class="text-blue-400 hover:underline truncate flex-1"
+                    >
+                      ${video.label}
+                    </a>
+                  </div>
+                  <div class="button-group">
+                    <button 
+                      onclick="renameVideo(${videos.indexOf(video)})" 
+                      class="bg-yellow-700 text-white px-2 py-1 rounded-md hover:bg-yellow-600 mr-2"
+                    >
+                      Rename
+                    </button>
+                    <button 
+                      onclick="deleteVideo(${videos.indexOf(video)})" 
+                      class="bg-red-700 text-white px-2 py-1 rounded-md hover:bg-red-600"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `;
+        videoList.appendChild(groupDiv);
+      });
+    }
+
+    function toggleGroup(header) {
+      const groupId = header.nextElementSibling.id;
+      const videosDiv = document.getElementById(groupId);
+      videosDiv.classList.toggle('hidden');
+    }
+
+    function deleteVideo(index) {
+      let videos = JSON.parse(localStorage.getItem('videos')) || [];
+      videos.splice(index, 1);
+      localStorage.setItem('videos', JSON.stringify(videos));
+      updateGroupDropdown();
+      displayVideos();
+    }
+
+    function deleteGroup(group) {
+      if (confirm(`Are you sure you want to delete the group "${group}" and all its videos?`)) {
+        let videos = JSON.parse(localStorage.getItem('videos')) || [];
+        videos = videos.filter(video => video.group !== group);
+        localStorage.setItem('videos', JSON.stringify(videos));
+        updateGroupDropdown();
+        displayVideos();
+      }
+    }
+
+    function exportData() {
+      const videos = JSON.parse(localStorage.getItem('videos')) || [];
+      const dataStr = JSON.stringify(videos, null, 2);
+      const blob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'videoLibrary.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const videos = JSON.parse(e.target.result);
+          localStorage.setItem('videos', JSON.stringify(videos));
+          updateGroupDropdown();
+          displayVideos();
+          alert('Data imported successfully!');
+        } catch (error) {
+          alert('Error importing data: Invalid JSON file');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function toggleSection() {
+      const section = document.getElementById('controlSection');
+      const toggleButton = document.getElementById('toggleSection');
+      if (section.classList.contains('hidden')) {
+        section.classList.remove('hidden');
+        toggleButton.classList.remove('rotate');
+      } else {
+        section.classList.add('hidden');
+        toggleButton.classList.add('rotate');
+      }
+    }
+
+    function renameGroup(oldGroupName) {
+      const newGroupName = prompt(`Enter new name for group "${oldGroupName}":`);
+      if (newGroupName && newGroupName.trim() !== oldGroupName) {
+        let videos = JSON.parse(localStorage.getItem('videos')) || [];
+        const updatedVideos = videos.map(video => {
+          if (video.group === oldGroupName) {
+            return { ...video, group: newGroupName.trim() };
+          }
+          return video;
+        });
+        localStorage.setItem('videos', JSON.stringify(updatedVideos));
+        updateGroupDropdown();
+        displayVideos();
+      }
+    }
+
+    function renameVideo(index) {
+      const videos = JSON.parse(localStorage.getItem('videos')) || [];
+      const oldLabel = videos[index].label;
+      const newLabel = prompt(`Enter new label for "${oldLabel}":`);
+      if (newLabel && newLabel.trim() !== oldLabel) {
+        videos[index].label = newLabel.trim();
+        localStorage.setItem('videos', JSON.stringify(videos));
+        displayVideos();
+      }
+    }
+
+    function toggleCompleted(event) {
+      const index = parseInt(event.target.id.split('-')[1]);
+      let videos = JSON.parse(localStorage.getItem('videos')) || [];
+      videos[index].completed = event.target.checked;
+      localStorage.setItem('videos', JSON.stringify(videos));
+      // No full re-render, just update the checkbox state visually if needed
+    }
+  </script>
+</body>
+</html>
